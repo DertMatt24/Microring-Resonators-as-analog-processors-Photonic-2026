@@ -7,14 +7,14 @@ A=1e9;  %time scaling parameter  [nano 10^9]
 
 % Input signal x(t)
 C=4;
-%x = Model_utils.step_function(C); % step function (Heaviside) 
-x = Model_utils.super_gaussian_function(45.8, 1);
+% x = Model_utils.step_function(C); % step function (Heaviside) 
+x = Model_utils.sin_function(A);
 
 % Definition of the ODE
 odefun = Model_utils.first_order_ode(A, k, x);
 
 % Initial condition
-y0 = 1;
+y0 = 0;
 
 % Time span
 tspan = [-100e-9 100e-9];
@@ -29,7 +29,7 @@ R=5000e-6;  %radiurn of the MRR
 neff=1.5;   %effective index of the MRR waveguide
 MRR = mrr(R, neff, k, A);
 
-%numerical version of the input step function x(t)
+
 N=1e5;
 time=linspace(min(t),max(t),N);
 dt=time(2)-time(1);
@@ -39,16 +39,18 @@ IN_ring=fftshift(fft(in_ring));
 Df=linspace(-1/(2*dt),1/(2*dt),N);
 
 
+
+
 %% computing output
 
-H_drop = MRR.h_drop_f(Df, k);
-H_ODE = MRR.h_ode(Df, k);
+H_drop = MRR.h_drop_f(Df);
+H_ODE = MRR.h_ode(Df);
 
 Out_ring=IN_ring.*H_drop;
 Out_ODE=IN_ring.*H_ODE;
 
-out_ring=ifft(fftshift(Out_ring));
-out_oude=ifft(fftshift(Out_ODE));
+out_ring=real(ifft(fftshift(Out_ring)));
+out_oude=real(ifft(fftshift(Out_ODE)));
 
 %% Tunable k from paper 4.7 using voltage
 % Table to link faster Voltage to k tuned values
@@ -56,17 +58,26 @@ out_oude=ifft(fftshift(Out_ODE));
 % k = [38.0 , 46.0  , 54.0  , 63.0  , 82.0]; [ns-1]
 
 MRR_Yang = mrr(R, neff, k, A);
-MRR_Yang.tuning_voltage(1.3, A);
+MRR_Yang.tuning_voltage(0.0, A);
 
-H_drop_Yang = MRR_Yang.h_drop_f(Df, k);
-H_ODE_Yang = MRR_Yang.h_ode(Df, k);
+H_drop_Yang = MRR_Yang.h_drop_f(Df);
+H_ODE_Yang = MRR_Yang.h_ode(Df);
 
-Out_ring_Yang=IN_ring.*H_drop_Yang;
 Out_ODE_Yang=IN_ring.*H_ODE_Yang;
 
-out_ring_Yang=ifft(fftshift(Out_ring_Yang));
+
 out_oude_Yang=ifft(fftshift(Out_ODE_Yang));
 
+
+Out_ring_Yang = IN_ring .* H_drop_Yang;
+out_ring_Yang = real(ifft(ifftshift(Out_ring_Yang)));
+
+%% Tunable k from paper 4.6 using heaters
+
+
+%% Computing power loss for each architectures
+[p, db] = MRR.power_loss(in_ring, out_ring, dt)
+[p_Yang, db_Yang]= MRR.power_loss(in_ring, out_ring_Yang, dt)
 
 %% generate plots
 t_min=-1;t_max=20;

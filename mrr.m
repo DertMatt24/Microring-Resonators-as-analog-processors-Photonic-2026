@@ -1,4 +1,4 @@
-classdef mrr
+classdef mrr < handle
     % MRR Class for simulating a Microring Resonator.
 
     properties
@@ -10,14 +10,15 @@ classdef mrr
         tau     % round trip time 
         tau_n   % dimensionless ratio between cavity lifetime and round trip time
         r       % coupling coefficient of the directional coupler of the MRR
+        A       % time scale factor
     end
     
     properties (Constant)
         c = 3e8; % light speed in vacuum [m/s]
         
         % data from paper 4.7, tuning k using these known values of k depending on V
-        V = [0.0, 0.9, 1.0, 1.1, 1.3]; % [V]
-        k = [38.0, 46.0, 54.0, 63.0, 82.0]; % [ns]
+        V_Yang = [0.0, 0.9, 1.0, 1.1, 1.3]; % [V]
+        k_Yang = [38.0, 46.0, 54.0, 63.0, 82.0]; % [ns-1]
     end
 
     methods
@@ -41,6 +42,8 @@ classdef mrr
                 obj.tau_n = obj.tau_c / obj.tau;
 
                 obj.r = sqrt(obj.tau_n/(1+obj.tau_n));
+
+                obj.A = A;
             else
                error("mrr build failed, be sure to have inserted 4 parameters!") 
             end    
@@ -50,9 +53,9 @@ classdef mrr
         % Function to tune the k parameter
         % k_new: new value tuned
         % A: time scale
-        function obj = tuning_k(obj, k_new, A)
+        function obj = tuning_k(obj, k_new)
             % Changing k value and all other values that depends from k
-            obj.k_ring = k_new * A;
+            obj.k_ring = k_new * obj.A;
             obj.tau_c = 1/obj.k_ring;
             obj.tau_n = obj.tau_c / obj.tau;
             obj.r = sqrt(obj.tau_n/(1+obj.tau_n));
@@ -62,30 +65,47 @@ classdef mrr
         % voltage: voltage value in [0.0, 0.9, 1.0, 1.1, 1.3]
         % A: time scale
         function obj = tuning_voltage(obj, voltage, A)
-            id = find(mrr.V == voltage);
+            id = find(mrr.V_Yang == voltage);
             % if id is empty, it means that the voltage value inserted was
             % not documented inside the paper 4.7, so we return an error
             % due to unknown behaviour
             if ~isempty(id)
-                obj.tuning_k(mrr.k(id), A); % tuning to known k parameter
+                obj.tuning_k(mrr.k_Yang(id)); % tuning to known k parameter
             else
                 error("The voltage value is not supported. Supported values: [%s]", num2str(mrr.V))
             end    
                 
         end    
-
+        
+        %% Drop port
         % Computing the h_drop function in frequency domain
-        function h_drop = h_drop_f(obj, Df, k)
+        function h_drop = h_drop_f(obj, Df)
+            k = obj.k_ring / obj.A;
             beta=2 * pi * Df / mrr.c * obj.neff;
             h_drop= 1/k*(1-obj.r^2)./(1-obj.r^2*exp(-1i*beta*obj.L_ring)); %frequency domain description of the MRR
         end    
         
         % Frequency domain descritpion of the ODE
-        function H_ODE = h_ode(obj, Df, k)
+        function H_ODE_drop = h_ode(obj, Df)
+            k = obj.k_ring / obj.A; 
             t_c = obj.tau_c;
-            H_ODE=1/k*(1/t_c)./(1/t_c+1i*2*pi*Df);
+            H_ODE_drop=1/k*(1/t_c)./(1/t_c+1i*2*pi*Df);
         end    
-
+        
+        %% Through port
+        % Through port transfer function
+        function h_through = h_through_f(obj, Df)
+            k = obj.k_ring / obj.A;
+            beta = 2 * pi * Df / mrr.c * obj.neff;
+            h_through = 1/k * obj.r * (1 - exp(-1i*beta*obj.L_ring)) ./ ...
+                        (1 - obj.r^2 * exp(-1i*beta*obj.L_ring));
+        end 
+        
+        function H_ODE_through = h_ode_through(obj, Df, a0, b0)
+            H_ODE_through = (b0 + 1i*2*pi*Df) ./ (a0 + 1i*2*pi*Df);
+        end
+        
+        %%
         % Computing the Free Spectral Range
         % ng: group index
         function fsr = FSR(obj, ng)
@@ -104,7 +124,34 @@ classdef mrr
         function quality_factor = Q(obj, f0)
             quality_factor = 2 * pi * f0 * obj.tau_c;
         end    
+        
+        %% Paper 4.6 tuning a0, b0
+        
+        function q = Q_Wu(obj, f0, ng, etha)
+            w0 = 2 * pi * f0;
 
+            q = w0 * ng * obj.L_ring / (mrr.c * log(1-etha));
+        end
+
+        %% Computing power difference
+        
+        % Computing power
+        % x: signal received
+        % dt: time domain where the signal is defined
+        function power = power(obj, x, dt)
+            power = sum(abs(x).^2)*dt;
+        end    
+        
+        % Computing power loss in W and dB
+        % x: input signal
+        % y: output signal
+        function [P_loss, P_loss_dB] = power_loss(obj, x, y, dt)
+            P_in = obj.power(x, dt);
+            P_out = obj.power(y, dt);
+
+            P_loss = P_out - P_in;
+            P_loss_dB = 10*log10(P_out/P_in);
+        end    
     end    
 
 end

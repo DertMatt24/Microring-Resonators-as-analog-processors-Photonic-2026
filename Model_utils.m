@@ -15,13 +15,7 @@ classdef Model_utils
         function x = sin_function(A)
             x = @(t) sin(A*t); %sinusoidal signal
         end    
-        
-        % Gaussian function
-        function x = gaussian_function(FWHM)
-            
-            sigma = FWHM / (2*sqrt(2*log(2)));
-            x = @(t) exp(-t.^2 / (2*sigma^2));
-        end    
+           
         
         % Super gaussian function
         function x = super_gaussian_function(FWHM, m)
