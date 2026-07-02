@@ -74,6 +74,23 @@ classdef graph_drawer
             xlabel('Frequency [GHz]')
             ylabel('Spectrum [dB]')
         end
+        
+        % plotting the spectrum signal for fsr
+        function spectrum_fsr(Df, H_drop, H_ODE, IN_ring, fsr, range)
+            hold on; grid on, box on
+            plot(Df/fsr,10*log10(abs(H_drop./max(abs(H_drop))).^2),'r','LineWidth',2)
+            plot(Df/fsr,10*log10(abs(H_ODE./max(H_ODE)).^2),'b','LineWidth',2)
+            plot(Df/fsr,10*log10(abs(IN_ring./max(abs(IN_ring))).^2),'k','LineWidth',2)
+
+            legend('MRR ODE', 'Ideal ODE', 'Input Signal Spectrum', ...
+           'Location', 'southwest', 'FontSize', 10);
+
+            set(gca,'fontsize',12)
+            ylim([-30 0])
+            xlim([-range range])
+            xlabel('Frequency/FSR')
+            ylabel('Spectrum [dB]')
+        end
 
         function power_graph(phase_detuning, P_optical_out, P_in)
             % Converting output in dB
