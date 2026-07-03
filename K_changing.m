@@ -2,15 +2,26 @@ close all
 clear all 
 clc
 
-k_eq = 0.5; % ns^-1
-k = 0.5;  % ns^-1
+k_eq = 62.5; % ns^-1
+k = 62.5;  % ns^-1
 A=1e9;  %time scaling parameter  [nano 10^9]
+A_time = A * 1e3;
+% Input signal x(t)
+C=4;
+
+% ODE SOLVER: k = Bs -> A_time = A * 1e3;
+% FWHM = 19.07 * 1e-3;
+% INTEGRATOR: k >> Bs -> A_time = A * 1e4;
+% FWHM = 19.07 * 1e-4;
+% SCALER: k << Bs -> A_time = A;
+% FWHM = 19.07;
+FWHM = 19.07 * 1e-3; 
 
 % Input signal x(t)
 C=4;
 %x = Model_utils.step_function(C); % step function (Heaviside) 
-x = Model_utils.sin_function(A);
-%x = Model_utils.super_gaussian_function(19.07, A);
+%x = Model_utils.sin_function(A);
+x = Model_utils.super_gaussian_function(FWHM, A);
 %x = Model_utils.gaussian_chirped(19.07, A, C);
 %x = Model_utils.arbitrary_signal(A);
 
@@ -21,19 +32,21 @@ odefun = Model_utils.first_order_ode(A, k_eq, x);
 y0 = 0;
 
 % Time span
-tspan = [-100e-9 100e-9];
+N=1e5;
+interval = 100/A_time;
+tspan = linspace(-interval , interval, N);
 
 % Solve using ode45
 [t, y] = ode45(odefun, tspan, y0);
 
 
 %% creatinng MRR
-R=5000e-6;  %radius of the MRR
-neff=1.5;   %effective index of the MRR waveguide
+R=30e-6;  %radius of the MRR
+neff=2.4;   %effective index of the MRR waveguide
 MRR = mrr(R, neff, k, A, 0);
 
 %% Computing input
-N=1e5;
+
 time=linspace(min(t),max(t),N);
 dt=time(2)-time(1);
 in_ring = x(time);
@@ -44,7 +57,7 @@ Df=linspace(-1/(2*dt),1/(2*dt),N);
 %% ANALYSIS on CHANGING K_eq
 % MRR extra parameters
 k_perfect = k_eq; % k parameter of MRR to solve perfectly the ODE
-is_tunable = false; % is the MRR tunable
+is_tunable = true; % is the MRR tunable
 port_used = "drop"; % the output port the MRR uses
 
             
@@ -61,7 +74,6 @@ rmse_values_scaled = zeros(1,N);
 
 % parameter useful for ODE
 y0 = 0;
-tspan = [-100e-9 100e-9];
 
 % for loop changing k values
 for i = 1 : length(k_values)

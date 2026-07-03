@@ -38,6 +38,10 @@ classdef Model_utils
             x = @(t) exp(-(1 + 1j*C) .* t.^2 / (2*sigma^2));
         end    
 
+        function x = rectangular(t0, alpha)
+            x = @(t) alpha * (t >= -t0 & t <= t0);
+        end
+
         function x = arbitrary_signal(A)
             x = @(t) A.*t.*exp(-(A*t).^2).*cos(3*A*t);
         end    

@@ -17,8 +17,9 @@ classdef graph_drawer
         
         % This method plots the input signal over time.
         function draw_input(obj, in_ring, A)
+            timescale = graph_drawer.find_time_label(A);
             subplot(311);hold on;grid on;box on;plot(obj.time*A, in_ring,'k','LineWidth',2)
-            xlabel('Time [ns]')
+            xlabel(timescale)
             ylabel('Input x(t)')
             xlim([obj.t_min obj.t_max])
             set(gca,'fontsize',12)
@@ -26,10 +27,12 @@ classdef graph_drawer
         
         % This method plots the output signal over time.
         function draw_output(obj, out_ring, t, y, A)
+            timescale = graph_drawer.find_time_label(A);
+
             subplot(312);hold on;grid on;box on;
             plot(t*A, y,'k','LineWidth',2)
             grid on; plot(obj.time*A, out_ring,'r','LineWidth',2)
-            xlabel('Time [ns]')
+            xlabel(timescale)
             ylabel('Output y(t)')
             xlim([obj.t_min obj.t_max])
             set(gca,'fontsize',12)
@@ -37,9 +40,11 @@ classdef graph_drawer
         
         % This method plots the output power over time
         function draw_power(obj, out_ring, t, y, A)
+            timescale = graph_drawer.find_time_label(A);
+
             subplot(313);hold on;grid on;box on;plot(t*A, abs(y).^2,'k','LineWidth',2)
             plot(obj.time*A, (out_ring).^2,'r','LineWidth',2)
-            xlabel('Time [ns]')
+            xlabel(timescale)
             ylabel(' Output | y(t) |^2')
             xlim([obj.t_min obj.t_max])
             set(gca,'fontsize',12)
@@ -60,6 +65,8 @@ classdef graph_drawer
     methods (Static)
         % This method plots the power spectrum in frequency domain.
         function spectrum_f(Df, H_drop, H_ODE, IN_ring, A)
+            fscale = graph_drawer.find_frequency_label(A);
+            
             hold on; grid on, box on
             plot(Df/A,10*log10(abs(H_drop./max(abs(H_drop))).^2),'r','LineWidth',2)
             plot(Df/A,10*log10(abs(H_ODE./max(H_ODE)).^2),'b','LineWidth',2)
@@ -71,7 +78,7 @@ classdef graph_drawer
             set(gca,'fontsize',12)
             ylim([-30 0])
             xlim([-15 15])
-            xlabel('Frequency [GHz]')
+            xlabel(fscale)
             ylabel('Spectrum [dB]')
         end
         
@@ -141,9 +148,7 @@ classdef graph_drawer
             hold on;
             
             if ~ isnan(k_perfect)
-                xline(k_perfect, '--r', sprintf('k_{ideal} = %.2f ns^-1', k_perfect), ...
-                'LabelVerticalAlignment', 'bottom', 'LineWidth', 1.5);
-                k_legend = 'ideal_k';
+                legend('Power loss', 'Location', 'best');
             else
                 xline(min(mrr.k_Yang), '--k', 'k = 38 ns^-1', 'LabelVerticalAlignment', 'bottom', ...
                     'LineWidth', 1.5, 'DisplayName', 'Lower Limit (38 ns^-1)');
@@ -152,12 +157,13 @@ classdef graph_drawer
                     'LineWidth', 1.5, 'DisplayName', 'Upper Limit (81 ns^-1)');
                 
                 k_legend = 'k limits (Yang et al.)';
+                legend('Power loss', k_legend, 'Location', 'best');
             end
             
             xlabel('k [ns^{-1}]');
             ylabel('Power loss [dB]');
             title('Power loss vs coefficient k');
-            legend('Power loss', k_legend, 'Location', 'best');
+            
             grid on;
             hold off;
         end
@@ -189,12 +195,9 @@ classdef graph_drawer
             xlabel('Coupling Coefficient k [ns^{-1}]', 'FontSize', 12);
             ylabel('RMSE', 'FontSize', 12);
             title('RMSE analysis on scaled output (1/k)', 'FontSize', 14, 'FontWeight', 'bold');
-
-            if ~ isnan(k_perfect)
-                xline(k_perfect, '--r', sprintf('k_{ideal} = %.2f ns^-1', k_perfect), ...
-                'LabelVerticalAlignment', 'bottom', 'LineWidth', 1.5);
-                k_legend = 'ideal k';
-            else
+                
+                
+            if isnan(k_perfect)
                 xline(min(mrr.k_Yang), '--k', 'k = 38 ns^-1', 'LabelVerticalAlignment', 'bottom', ...
                     'LineWidth', 1.5, 'DisplayName', 'Lower Limit (38 ns^-1)');
                 
@@ -202,11 +205,44 @@ classdef graph_drawer
                     'LineWidth', 1.5, 'DisplayName', 'Upper Limit (81 ns^-1)');
                 
                 k_legend = 'k limits (Yang et al.)';
+                legend('rmse', k_legend, 'Location', 'best');
             end
             
-            legend('rmse', k_legend, 'Location', 'best');
+            
 
             hold off;
+        end
+
+        function timescale = find_time_label(A)
+            scale = A / 1e9;
+            
+            if scale >= 1e6 
+                timescale = 'Time [fs]';
+            elseif scale >= 1e3
+                timescale = 'Time [ps]';
+            elseif scale >= 1
+                timescale = 'Time [ns]';
+            elseif scale >= 1e-3
+                timescale = 'Time [us]';
+            else
+                timescale = 'Time [ms]';
+            end
+        end
+
+        function fscale = find_frequency_label(A)
+            scale = A / 1e9;
+            
+            if scale >= 1e6 
+                fscale = 'Frequency [PHz]';
+            elseif scale >= 1e3
+                fscale = 'Frequency [THz]';
+            elseif scale >= 1
+                fscale = 'Frequency [GHz]';
+            elseif scale >= 1e-3
+                fscale = 'Frequency [MHz]';
+            else
+                fscale = 'Frequency [KHz]';
+            end
         end
 
     end    
