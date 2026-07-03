@@ -39,7 +39,9 @@ Qi = MRR_Wu.Q_Wu(f0, ng, etha);       % Q dovuto alle perdite interne della cavi
 Qe1 = MRR_Wu.Q_Wu(f0, ng, MRR_Wu.k1); % Q esterno dovuto alla Through Port
 Qe2 = MRR_Wu.Q_Wu(f0, ng, MRR_Wu.k2); % Q esterno dovuto alla Drop Port
 
-[a0, b0] = MRR_Wu.parameters_LTI(f0, Qi, Qe1, Qe2);
+[a0, b0] = MRR_Wu.parameters_LTI(f0, Qi, Qe1, Qe2)
+
+MRR_Wu.tau_c = 1 / a0; % cavity lifetime 13 ps
 
 fsr = MRR_Wu.FSR(ng);
 b3db = MRR_Wu.B3dB(a0);
@@ -49,27 +51,30 @@ a0_scaled = a0/A;
 b0_scaled = b0/A;
 
 % C=4;
-%x = Model_utils.step_function(C); % step function (Heaviside) 
+%x = Model_utils.step_function(2); % step function (Heaviside) 
 %x = Model_utils.sin_function(A);
-%x = Model_utils.gaussian_chirped(19.07, A, C);
+%x = Model_utils.gaussian_chirped(0.01907, A, 2);
 %x = Model_utils.arbitrary_signal(A);
 
 % Input signal x(t)
-x = Model_utils.super_gaussian_function(0.01, A);
+x = Model_utils.super_gaussian_function(0.1907, A);
 
 % in our model we have a first derivative of the input
-x_d = Model_utils.derivative(x);
+x_d = Model_utils.derivative(x, 0.1907/A);
 
 % Definition of the ODE of paper 4.6
 odefun = Model_utils.first_order_lti_scaled(a0, b0, x, x_d, A);
 
 % Implementing the ODE solver with a microring resonator
 % Initial condition
+
 y0 = 0;
 
 N = 1e5;
-t_start = -100e-12;
-t_end = 100e-12;
+t_start = -1e-9;
+t_end = 1e-9;
+
+fprintf('BS: %.3e >> tau_c: %.3e',t_end - t_start,MRR_Wu.tau_c);
 
 n_fsr_range = 4; 
 dt_max = 1 / (2 * n_fsr_range * fsr);
@@ -104,6 +109,8 @@ delta_f = 0;
 H_through_optical = MRR_Wu.h_through_f(Df,delta_f);
 H_through_ODE = MRR_Wu.h_ode_through(Df, a0, b0, delta_f);
 
+% normalized
+
 Out_through_optical_F = IN_ring .* H_through_optical;
 Out_through_ODE_F = IN_ring .* H_through_ODE;
 
@@ -118,20 +125,15 @@ fprintf('Variazione di Potenza (Modello Ottico): %.2f dB\n', db_Wu);
 fprintf('Variazione di Potenza (Modello ODE - CMT):     %.2f dB\n', db);
 
 %% generate plots
-t_min=-0.05;t_max=0.05;
+t_min=-1;t_max=1;
 
 utils = graph_drawer(t_min, t_max, tspan);
 
 figure(1)
 utils.input_output_power(in_ring, Out_through_optical,t ,y, A);
 % Perfezionamento dei titoli e legende per adattarsi al comportamento Through
-subplot(311); title('Analisi Temporale alla Through Port (Modello Asimmetrico Wu)');
-subplot(312); ylabel('Output y(t) & Through_{opt}'); legend('Soluzione ODE (y)', 'Modello Ottico Esatto');
-subplot(313); ylabel('Output |y(t)|^2 & |Through_{opt}|^2'); legend('Potenza ODE |y|^2', 'Potenza Ottica Esatta');
-
-figure(2)
-graph_drawer.spectrum_f(Df, H_through_optical, H_through_ODE, IN_ring, A);
-title('Spettro di Risposta in Frequenza alla Through Port');
-legend('Filtro Ottico Esatto', 'Filtro Approssimato ODE', 'Spettro Segnale Ingresso');
+subplot(311); title('Temporal Analysis - Through Port (Asym model)');
+subplot(312); ylabel('Output y(t) & Through_{opt}'); legend('Exact solution', 'Optical Power');
+subplot(313); ylabel('Output |y(t)|^2 & |Through_{opt}|^2'); legend('Power ODE |y|^2', 'Optical Power');
 
 % legenda AI slop perchè sono pigro

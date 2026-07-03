@@ -130,7 +130,7 @@ classdef mrr_asym
         %% through port function
         function h_through = h_through_f(obj, Df, delta_f)
             alpha_Np = obj.alpha * log(10) / 20; 
-            beta = 2 * pi * (Df - delta_f) / obj.c * obj.neff;
+            beta = 2 * pi * (Df - delta_f) / obj.c * obj.ng;
             gamma = (alpha_Np + 1i*beta) * obj.L_ring;
         
             t1 = sqrt(1 - obj.k1);

@@ -30,8 +30,8 @@ classdef graph_drawer
             timescale = graph_drawer.find_time_label(A);
 
             subplot(312);hold on;grid on;box on;
-            plot(t*A, y,'k','LineWidth',2)
-            grid on; plot(obj.time*A, out_ring,'r','LineWidth',2)
+            plot(t*A, y,'k--','LineWidth',2)
+            grid on; plot(obj.time*A, out_ring,'r:','LineWidth',2)
             xlabel(timescale)
             ylabel('Output y(t)')
             xlim([obj.t_min obj.t_max])
@@ -42,8 +42,8 @@ classdef graph_drawer
         function draw_power(obj, out_ring, t, y, A)
             timescale = graph_drawer.find_time_label(A);
 
-            subplot(313);hold on;grid on;box on;plot(t*A, abs(y).^2,'k','LineWidth',2)
-            plot(obj.time*A, (out_ring).^2,'r','LineWidth',2)
+            subplot(313);hold on;grid on;box on;plot(t*A, abs(y).^2,'k--','LineWidth',2)
+            plot(obj.time*A, (out_ring).^2,'r:','LineWidth',2)
             xlabel(timescale)
             ylabel(' Output | y(t) |^2')
             xlim([obj.t_min obj.t_max])
