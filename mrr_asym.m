@@ -136,14 +136,14 @@ classdef mrr_asym
             t1 = sqrt(1 - obj.k1);
             t2 = sqrt(1 - obj.k2);
         
-            h_through = (t1 - t2*exp(-gamma)) ./ (1 - t1*t2*exp(-gamma));
+            h_through = ((t1 - t2*exp(-gamma)) ./ (1 - t1*t2*exp(-gamma)));
         end
 
         %% Through port — versione LINEARIZZATA (Eq. 3/4 del paper)
         % Da chiamare con a0, b0 gia calcolati (via parameters_LTI).
         function H_ODE_through = h_ode_through(obj, Df, a0, b0, delta_f)
             delta_Df = Df - delta_f;
-            H_ODE_through = (b0 + 1i*2*pi*delta_Df) ./ (a0 + 1i*2*pi*delta_Df);
+            H_ODE_through = ((b0 + 1i*2*pi*delta_Df) ./ (a0 + 1i*2*pi*delta_Df));
         end
         
         

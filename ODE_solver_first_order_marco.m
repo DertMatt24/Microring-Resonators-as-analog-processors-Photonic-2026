@@ -4,6 +4,8 @@ clc
 
 A = 1e9;  %time scaling parameter  [nano 10^9]
 
+
+
 %% parameters definition from the paper:
 L_ring = 178.98e-6; %circumference of the ring
 R_ring = L_ring/(2*pi); %radius of the ring
@@ -17,9 +19,20 @@ L_r2 = 47.12e-6;
 
 k0 = 0.0441;
 
-% not explicitly defined inside the paper
-nb1 = ng; % for now ng
-nb2 = ng; % for now ng
+%% tentativo
+eta1 = 6.35e-4;   % 1/mW, efficienza heater 1
+eta2 = 6.47e-4;   % 1/mW, efficienza heater 2
+
+% --> primo test: P_heater1 : 0, 1.52, 2.93, P_heater2 = 0.
+% --> secondo test: P_heater1 : 0, P_heater2: 0, 2.92, 5,57
+% --> terzo test: a0 const, b0 varied (0, 11.94), (1.60,10.28), (2.39,8.72)
+% --> quarto test: a0 varied, b0 const
+
+P_heater1 = 1.60; % mW
+P_heater2 = 10.28; % mW
+
+nb1 = ng + eta1 * P_heater1;
+nb2 = ng + eta2 * P_heater2;
 
 alpha = 800; % (db/m) loss factor
 loss_dB_rt = alpha * L_ring; % loss in dB for round-trip
@@ -57,10 +70,11 @@ b0_scaled = b0/A;
 %x = Model_utils.arbitrary_signal(A);
 
 % Input signal x(t)
-x = Model_utils.super_gaussian_function(0.1907, A);
+FWHM = 0.01907;
+x = Model_utils.super_gaussian_function(FWHM, A);
 
 % in our model we have a first derivative of the input
-x_d = Model_utils.derivative(x, 0.1907/A);
+x_d = Model_utils.derivative(x, FWHM/A);
 
 % Definition of the ODE of paper 4.6
 odefun = Model_utils.first_order_lti_scaled(a0, b0, x, x_d, A);
@@ -94,6 +108,8 @@ tspan_ns = tspan * A;
 [t_ns, y] = ode45(odefun, tspan_ns, y0);
 t = t_ns / A;
 
+y_norm = y ./ max(abs(y));
+
 in_ring = x(tspan);
 
 IN_ring=fftshift(fft(in_ring));
@@ -117,6 +133,8 @@ Out_through_ODE_F = IN_ring .* H_through_ODE;
 Out_through_optical = real(ifft(ifftshift(Out_through_optical_F)));
 Out_through_ODE = real(ifft(ifftshift(Out_through_ODE_F)));
 
+Out_through_optical_norm = Out_through_optical ./ max(abs(Out_through_optical));
+
 [p_Wu, db_Wu] = MRR_Wu.power_loss(in_ring, Out_through_optical, dt);
 [p, db]= MRR_Wu.power_loss(in_ring, Out_through_ODE, dt);
 
@@ -125,12 +143,12 @@ fprintf('Variazione di Potenza (Modello Ottico): %.2f dB\n', db_Wu);
 fprintf('Variazione di Potenza (Modello ODE - CMT):     %.2f dB\n', db);
 
 %% generate plots
-t_min=-1;t_max=1;
+t_min=-0.1;t_max=0.1;
 
 utils = graph_drawer(t_min, t_max, tspan);
 
 figure(1)
-utils.input_output_power(in_ring, Out_through_optical,t ,y, A);
+utils.input_output_power(in_ring, Out_through_optical_norm,t ,y_norm, A);
 % Perfezionamento dei titoli e legende per adattarsi al comportamento Through
 subplot(311); title('Temporal Analysis - Through Port (Asym model)');
 subplot(312); ylabel('Output y(t) & Through_{opt}'); legend('Exact solution', 'Optical Power');
