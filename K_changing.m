@@ -118,7 +118,7 @@ end
 % plotting results
 if is_tunable 
     graph_drawer.plot_power_vs_k(k_values, p_out_db)
-    before_commit.plot_rmse_analysis(k_values, rmse_values_scaled)
+    graph_drawer.plot_rmse_analysis(k_values, rmse_values_scaled)
 else
     graph_drawer.plot_power_vs_k(k_values, p_out_db, k_perfect)
     graph_drawer.plot_rmse_analysis(k_values, rmse_values_scaled, k_perfect)

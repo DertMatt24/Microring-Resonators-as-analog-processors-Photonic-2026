@@ -153,8 +153,8 @@ classdef graph_drawer
                 xline(min(mrr.k_Yang), '--k', 'k = 38 ns^-1', 'LabelVerticalAlignment', 'bottom', ...
                     'LineWidth', 1.5, 'DisplayName', 'Lower Limit (38 ns^-1)');
                 
-                xline(max(mrr.k_Yang), '--k', 'k = 81 ns^-1', 'LabelVerticalAlignment', 'bottom', ...
-                    'LineWidth', 1.5, 'DisplayName', 'Upper Limit (81 ns^-1)');
+                xline(max(mrr.k_Yang), '--k', 'k = 82 ns^-1', 'LabelVerticalAlignment', 'bottom', ...
+                    'LineWidth', 1.5, 'DisplayName', 'Upper Limit (82 ns^-1)');
                 
                 k_legend = 'k limits (Yang et al.)';
                 legend('Power loss', k_legend, 'Location', 'best');
@@ -201,8 +201,8 @@ classdef graph_drawer
                 xline(min(mrr.k_Yang), '--k', 'k = 38 ns^-1', 'LabelVerticalAlignment', 'bottom', ...
                     'LineWidth', 1.5, 'DisplayName', 'Lower Limit (38 ns^-1)');
                 
-                xline(max(mrr.k_Yang), '--k', 'k = 81 ns^-1', 'LabelVerticalAlignment', 'bottom', ...
-                    'LineWidth', 1.5, 'DisplayName', 'Upper Limit (81 ns^-1)');
+                xline(max(mrr.k_Yang), '--k', 'k = 82 ns^-1', 'LabelVerticalAlignment', 'bottom', ...
+                    'LineWidth', 1.5, 'DisplayName', 'Upper Limit (82 ns^-1)');
                 
                 k_legend = 'k limits (Yang et al.)';
                 legend('rmse', k_legend, 'Location', 'best');
