@@ -30,8 +30,8 @@ classdef graph_drawer
             timescale = graph_drawer.find_time_label(A);
 
             subplot(312);hold on;grid on;box on;
-            plot(t*A, y,'k--','LineWidth',2)
-            grid on; plot(obj.time*A, out_ring,'r:','LineWidth',2)
+            plot(t*A, y,'k','LineWidth',2)
+            grid on; plot(obj.time*A, out_ring,'r','LineWidth',2)
             xlabel(timescale)
             ylabel('Output y(t)')
             xlim([obj.t_min obj.t_max])
@@ -42,8 +42,8 @@ classdef graph_drawer
         function draw_power(obj, out_ring, t, y, A)
             timescale = graph_drawer.find_time_label(A);
 
-            subplot(313);hold on;grid on;box on;plot(t*A, abs(y).^2,'k--','LineWidth',2)
-            plot(obj.time*A, (out_ring).^2,'r:','LineWidth',2)
+            subplot(313);hold on;grid on;box on;plot(t*A, abs(y).^2,'k','LineWidth',2)
+            plot(obj.time*A, (out_ring).^2,'r','LineWidth',2)
             xlabel(timescale)
             ylabel(' Output | y(t) |^2')
             xlim([obj.t_min obj.t_max])
@@ -112,26 +112,19 @@ classdef graph_drawer
             ylim([max(P_out_dB)-50, max(P_out_dB)+2]); 
         end
 
-        function power_loss(phase_detuning, P_lost, P_in)
-            % Converting power lost in dB
-            P_lost_dB = 10 * log10((P_lost ./ P_in));
+        function power_loss(phase_detuning, P_lost_dB)
+            
+            
        
             plot(phase_detuning, P_lost_dB, 'r', 'LineWidth', 2, 'DisplayName', 'Power loss [dB]');
-            hold on; 
-        
-            % finding minimum power lost
-            [min_val, ~] = min(P_lost_dB);
-            yline(min_val, '--k', sprintf('  min = %.2f dB', min_val), ...
-                  'LabelVerticalAlignment', 'bottom', 'Alpha', 0.5, ...
-                  'DisplayName', 'Minimum power used');
+            hold on;
 
             grid on;
-            xlabel('Phase Detuning \Delta\phi [rad]');
+            xlabel('Phase Detuning \Deltaf / FSR');
             ylabel('Power loss [dB]');
             title('Power loss vs Phase detuning');
-            legend('show', 'Location', 'southwest');
             xlim([min(phase_detuning) max(phase_detuning)]);
-            ylim([min(P_lost_dB)-2, max(P_lost_dB)+2]);
+            ylim([min(P_lost_dB)-0.5, max(P_lost_dB)+0.15]);
             
             hold off; 
         end
@@ -212,12 +205,27 @@ classdef graph_drawer
 
             hold off;
         end
+        
+        % plot rmse
+        function plot_rmse(delta_f_array, rmse_det)
+            plot(delta_f_array, rmse_det, 'b', 'LineWidth', 2, 'DisplayName', 'RMSE');
+            hold on;       
+            grid on;
+            xlabel('Frequency Detuning \Deltaf / FSR');
+            ylabel('RMSE');
+            title('RMSE vs Frequency Detuning');
+            hold off;
+        end
 
         function timescale = find_time_label(A)
             scale = A / 1e9;
             
             if scale >= 1e6 
                 timescale = 'Time [fs]';
+            elseif scale >= 1e5
+                timescale = 'Time [100 ps]'; 
+            elseif scale >= 1e4
+                timescale = 'Time [10 ps]';
             elseif scale >= 1e3
                 timescale = 'Time [ps]';
             elseif scale >= 1

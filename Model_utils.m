@@ -46,8 +46,8 @@ classdef Model_utils
             x = @(t) A.*t.*exp(-(A*t).^2).*cos(3*A*t);
         end    
         
-        function xd = derivative(x,FWHM)
-            h = FWHM*1e-6;
+        function xd = derivative(x)
+            h = eps;
             xd = @(t) (x(t+h) - x(t-h))/ (2*h);
         end    
         
@@ -81,7 +81,7 @@ classdef Model_utils
             a20 = a20/A;
             b20 = b20/A;
 
-            % sistema a due eq
+            % two equations system
             dy1 = - a10*y(1) + (1/A)*x_d(t/A) + b10*x(t/A);
             dy2 = - a20*y(2) + dy1 + b20*y(1);
 
@@ -91,6 +91,19 @@ classdef Model_utils
     
     %% GENERAL UTILS
     methods (Static)
-           
+        function rmse_ring = computing_rmse(time, t, out_ring_plot, y, N)
+            sum_sq_diff = 0;
+            N_total = length(time); 
+            for i = 1:N:N_total
+                end_idx = min(i + N - 1, N_total);
+                
+                chunk_y = interp1(t, y, time(i:end_idx), 'linear', 0);
+                chunk_out = out_ring_plot(i:end_idx);
+                
+                sum_sq_diff = sum_sq_diff + sum((chunk_y(:) - chunk_out(:)).^2);
+            end
+            
+            rmse_ring = sqrt(sum_sq_diff / N_total);
+        end
     end 
 end    

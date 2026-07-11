@@ -68,11 +68,18 @@ Df=linspace(-1/(2*dt),1/(2*dt),N);
 
 
 %% computing output
-delta_f = linspace(-20 * b3db, 20 * b3db, N);
 
-delta_f = 0;
+delta_f = fsr/2;
 [H_drop, H_drop_norm] = MRR.h_drop_f(Df, delta_f);
-H_ODE = MRR.h_ode(Df, delta_f);
+
+
+if mod(delta_f, fsr) == 0
+    tras = delta_f;
+else
+    tras = 0;
+end
+
+H_ODE = MRR.h_ode(Df, tras);
 
 Out_ring=IN_ring.*H_drop;
 Out_ODE=IN_ring.*H_ODE;
@@ -101,15 +108,5 @@ figure(3)
 graph_drawer.spectrum_f(Df, H_drop, H_ODE, IN_ring, A_time);
 
 % comuting rmse
-sum_sq_diff = 0;
-N_total = length(time); 
-for i = 1:N:N_total
-    end_idx = min(i + N - 1, N_total);
-    
-    chunk_y = interp1(t, y, time(i:end_idx), 'linear', 0);
-    chunk_out = out_ring_plot(i:end_idx);
-    
-    sum_sq_diff = sum_sq_diff + sum((chunk_y(:) - chunk_out(:)).^2);
-end
 
-rmse = sqrt(sum_sq_diff / N_total);
+rmse = Model_utils.computing_rmse(time, t, out_ring_plot, y, N);
