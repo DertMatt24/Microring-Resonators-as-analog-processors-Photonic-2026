@@ -69,7 +69,7 @@ Df=linspace(-1/(2*dt),1/(2*dt),N);
 
 %% computing output
 
-delta_f = fsr/2;
+delta_f = 0;
 [H_drop, H_drop_norm] = MRR.h_drop_f(Df, delta_f);
 
 

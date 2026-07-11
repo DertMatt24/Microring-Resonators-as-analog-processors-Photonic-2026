@@ -115,22 +115,6 @@ classdef mrr < handle
             H_ODE_drop=1/k*(1/t_c)./(1/t_c+1i*2*pi*(Df - delta_f));
         end    
         
-        %% Through port
-        % Through port transfer function
-        function [h_through, h_through_norm] = h_through_f(obj, Df, delta_f)
-            k = obj.k_ring / obj.A;
-            beta = 2 * pi * (Df - delta_f) / mrr.c * obj.neff;
-            gamma = (obj.alpha + 1i*beta) * obj.L_ring;
-
-            h_through = obj.r * (1 - exp(-gamma)) ./ ...
-                        (1 - obj.r^2 * exp(-gamma));
-            h_through_norm = h_through * 1/k;
-        end 
-        
-        function H_ODE_through = h_ode_through(obj, Df, a0, b0, delta_f)
-            delta_Df = Df - delta_f;
-            H_ODE_through = (b0 + 1i*2*pi*delta_Df) ./ (a0 + 1i*2*pi*delta_Df);
-        end
         
         %%
         % Computing the Free Spectral Range
@@ -157,62 +141,8 @@ classdef mrr < handle
         % f0: frequency [Hz]
         function quality_factor = Q(obj, f0)
             quality_factor = 2 * pi * f0 * obj.tau_c;
-        end    
+        end   
         
-        %% Paper 4.6 tuning a0, b0
-        
-        function q = Q_Wu(obj, f0, ng, etha)
-            w0 = 2 * pi * f0;
-
-            q = - w0 * ng * obj.L_ring / (mrr.c * log(1-etha));
-        end
-        
-        % This function computes the parameters definedd in the paper 4.6
-        % Note: b1 is constant at one for first order LTI
-        function [a0, b0] = parameters_LTI(obj, f0, Qi, Qe1, Qe2)
-            w0 = 2*pi*f0;
-            
-            % doubling Q-factors to make the code readable
-            d_Qi = Qi*2;
-            d_Qe1 = Qe1*2;
-            d_Qe2 = Qe2*2;
-            
-            % computing a0, b0 coefficients as the paper shows
-            a0 = w0 * (1/d_Qi + 1/d_Qe1 + 1/d_Qe2);
-            b0 = w0 * (1/d_Qi + 1/d_Qe2 - 1/d_Qe1);
-        end
-
-        %% Paper 4.6, Eq. 8: Effective coupling coefficients of the interferometric coupler
-        %
-        % Called once per coupler, calculate the related coupling
-        % coefficient
-        %
-        % n_b : effective index of the bus arm
-        % L_b : physical length of the bus arm
-        % n_r : effective index of the ring arm
-        % L_r :  physical length of the bus ring arm
-        % lambda0  : wavelength at which the coefficient is evaluated
-        %
-        % Returns:
-        % k        : effective power coupling coefficient of the coupler
-        %
-        function k = kappa(obj, n_b, L_b, n_r, L_r, lambda0)
-            if isempty(obj.k_0)
-                error("k_0 is not set. Define obj.k_0 (e.g. obj.kappa0 = 0.0441;) before calling kappa().")
-            end
- 
-            phi_b = 2*pi*n_b*L_b/lambda0; % phase shift along the bus arm
-            phi_r = 2*pi*n_r*L_r/lambda0; % phase shift along the ring arm
-            
-            alpha_Np = obj.alpha*log(10) / 20;
-
-            T_b = exp(-2*alpha_Np*L_b); % power transmission factor, bus arm
-            T_r = exp(-2*alpha_Np*L_r); % power transmission factor, ring arm
- 
-            k = obj.k_0*(1-obj.k_0) * (T_b + T_r + 2*sqrt(T_b*T_r)*cos(phi_b - phi_r));
-        end
-
-
         %% Computing power difference
         
         % Computing power
