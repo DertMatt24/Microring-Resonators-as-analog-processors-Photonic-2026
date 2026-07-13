@@ -572,9 +572,9 @@ Where:
 * **$C$** is the capacitance
 
 For simplicity, we assign the following component values:
-* $C = 1 \text{ nF}$
-* $R_1 = 101,5 \text{ m}\Omega$
-* $R_2 = 15 \text{ m}\Omega$
+* $C = 1 \text{ pF}$
+* $R_1 = 101,5 \Omega$
+* $R_2 = 15 \Omega$
 
 From these data, we can model the problem introducing a novel Microring Resonator (MRR).
 
