@@ -532,21 +532,6 @@ graph_drawer.plot_rmse(delta_f_array, rmse_det);
 
 # Extension to N-th order
 
-# LTI solver
-
-## Microring Resonator as LTI Differential Equation Solver
-
-By considering the through port as the output port, we can solve Linear-Time-Invariant (LTI) differential equations (where the derivative of the input signal appears).
-
-## Diagram
-<img src="img/1st_model.png">
-
-*Add-drop MRR with two directional couplers – Image taken from the paper «Compact tunable silicon photonic differential-equation solver for general linear time-invariant systems» - Wu et al.*
-
----
-
-## Mathematical Model
-
 ### LTI Equation
 The system can be described by the following differential equation:
 
@@ -588,14 +573,264 @@ Where:
 
 For simplicity, we assign the following component values:
 * $C = 1 \text{ nF}$
-* $R_1 = 16 \text{ m}\Omega$
-* $R_2 = 16 \text{ m}\Omega$
+* $R_1 = 101,5 \text{ m}\Omega$
+* $R_2 = 15 \text{ m}\Omega$
 
-From these data, we can model a Microring Resonator (MRR).
+From these data, we can model the problem introducing a novel Microring Resonator (MRR).
+
+In our code, we implemented a class called <samp>mrr_asym.m</samp>, which models a microring resonator that uses the through-port as its output port.
+
+## Assumptions
+* **Paper case:** $\alpha = 8  dB/cm $ 
+* **Initial condition:** $v_o(0) = 0 $
+
+## Diagram
+Novel model of our MRR
+<center><img src="img/mrr_asym.png"></center>
+
+---
+Matlab implementation of our MRR
+```matlab
+A = 1e9;  %time scaling parameter 
+
+%% parameters definition from the paper:
+L_ring = 178.98e-6; % circumference of the ring
+R_ring = L_ring/(2*pi); % radius of the ring
+ng = 4.1850;
+neff = 2.45;
+
+L_b1 = 116.8e-6;
+L_r1 = 47.12e-6;
+L_b2 = 47.12e-6;
+L_r2 = 47.12e-6;
+
+k0 = 0.0441;
+
+%% heater providing power
+eta1 = 6.35e-4;   % 1/mW, efficiency heater 1
+eta2 = 6.47e-4;   % 1/mW, efficiency heater 2
+
+P_heater1_1 = 0; % mW <20 limit defined by the paper
+P_heater2_1 = 0; % mW <20 limit defined by the paper
+
+nb1_1 = ng + eta1 * P_heater1_1;
+nb2_1 = ng + eta2 * P_heater2_1;
+
+alpha = 800; % (db/m) loss factor
+loss_dB_rt = alpha * L_ring; % loss in dB for round-trip
+transmission_rt = 10^(-loss_dB_rt / 10); % survived power after round-trip 
+etha = 1 - transmission_rt;
+
+lambda0 = 1550.391e-9; % resonance wavelenght
+f0 = mrr_asym.c / lambda0;
+
+%% inizialization of MRR
+MRR_Wu = mrr_asym(R_ring, neff, ng, k0, L_b1, L_r1, L_b2, L_r2, nb1_1, nb2_1, A, alpha);
+
+% calculating both k factors for the drop and through port
+[MRR_Wu.k1, MRR_Wu.k2] = MRR_Wu.kappa(lambda0);
+
+Qi = MRR_Wu.Q_Wu(f0, ng, etha);       % Q due to the loss inside cavity
+Qe1 = MRR_Wu.Q_Wu(f0, ng, MRR_Wu.k1); % Q --> through port
+Qe2 = MRR_Wu.Q_Wu(f0, ng, MRR_Wu.k2); % Q --> drop port
+```
+and here's how we calculate our coefficients and quality factors
+
+```matlab
+function [k1, k2] = kappa(obj,lambda0)
+ 
+            phi_b1 = (2 * pi * obj.nb1 * obj.Lb1) / lambda0; % phase shift along the bus arm 1
+            phi_b2 = (2 * pi * obj.nb2 * obj.Lb2) / lambda0; % phase shift along the bus arm 2
+            phi_r1 = (2 * pi * obj.ng * obj.Lr1) / lambda0; % phase shift along the ring arm 1
+            phi_r2 = (2 * pi * obj.ng * obj.Lr2) / lambda0; % phase shift along the ring arm 2
+            
+            alpha_Np = obj.alpha * log(10) / 20;
+
+            T_b1 = exp(-2 * alpha_Np * obj.Lb1); % power transmission factor, bus arm 1
+            T_r1 = exp(-2 * alpha_Np * obj.Lr1); % power transmission factor, ring arm 1
+            T_b2 = exp(-2 * alpha_Np * obj.Lb2); % power transmission factor, bus arm 2 
+            T_r2 = exp(-2 * alpha_Np * obj.Lr2); % power transmission factor, ring arm 2
+ 
+            k1 = obj.k_0 * (1 - obj.k_0) * (T_b1 + T_r1 + 2 * sqrt(T_b1 * T_r1) * cos(phi_b1 - phi_r1));
+            k2 = obj.k_0 * (1 - obj.k_0) * (T_b2 + T_r2 + 2 * sqrt(T_b2 * T_r2) * cos(phi_b2 - phi_r2));
+        end
+
+        %% Paper 4.6 tuning a0, b0
+        
+        function q = Q_Wu(obj, f0, ng, etha)
+            w0 = 2 * pi * f0;
+
+            q = - w0 * ng * obj.L_ring / (obj.c * log(1-etha));
+        end
+        
+        % This function computes the parameters definedd in the paper 4.6
+        % Note: b1 is constant at one for first order LTI
+        function [a0, b0] = parameters_LTI(obj, f0, Qi, Qe1, Qe2)
+            w0 = 2*pi*f0;
+            
+            % doubling Q-factors to make the code readable
+            d_Qi = Qi*2;
+            d_Qe1 = Qe1*2;
+            d_Qe2 = Qe2*2;
+            
+            % computing a0, b0 coefficients as the paper shows
+            a0 = w0 * (1/d_Qi + 1/d_Qe1 + 1/d_Qe2);
+            b0 = w0 * (1/d_Qi + 1/d_Qe2 - 1/d_Qe1);
+        end
+```
+## Solving the Previous Problem
+
+Let's tune the parameters:
+* $P1 = 0 \text{ mW}$
+* $P2 = 0 \text{ mW}$
+
+Which translates into the following equation:
+
+$$\frac{dy(t)}{dt} + a_0 y(t) = \frac{dx(t)}{dt} + b_0 x(t), \quad y_0 = 0$$
+
+Providing the following parameter values:
+* $a_0 = 7.6622 \cdot 10^{10} \text{ s}^{-1}$
+* $b_0 = 9.8448 \cdot 10^9 \text{ s}^{-1}$
 
 ---
 
-## Assumptions
-* **No chromatic dispersion:** $n_g = n_{\text{eff}}$
-* **Ideal case:** $\alpha = 0$ (no power line losses)
-* **Initial condition:** $v_o(0) = 0$
+## Simulation Results
+
+### Temporal Analysis - Through Port (Asym model)
+
+<center><img src="img/LTI.png"></center>
+
+The plots above show the temporal analysis results:
+1. **Input Signal $x(t)$**: A Gaussian input pulse centered at $t = 0 \text{ ns}$.
+2. **Output $y(t)$ & Through Port Optical Power**: The exact solution tracking the optical power waveform.
+3. **Output $|y(t)|^2$ & $|\text{Through}_{\text{opt}}|^2$**: The squared magnitude comparing the Power ODE solution against the simulated optical power.
+
+# Tuning the Coefficient Through the Heaters
+
+By utilizing integrated microheaters, we can dynamically tune the coefficients of our microring resonator (MRR) solver. Due to the absence of explicit fabrication, we characterize this tuning via a **power efficiency value** that accurately models the **thermo-optic effect** (where localized temperature changes shift the refractive index and introduce phase modifications).
+
+---
+
+## Part 1: Tuning Heater 1 ($P_1$)
+
+In the first set of tests, power is applied incrementally to $P_1$ while keeping $P_2$ completely deactivated ($0\text{ mW}$). This configuration allows us to observe the progressive suppression and restructuring of the secondary peak response.
+
+### Tuning Configurations (Set 1)
+
+| Configuration | Heater Power 1 ($P_1$) | Heater Power 2 ($P_2$) |
+| :--- | :--- | :--- |
+| **Case I (Red)** | $0 \text{ mW}$ | $0 \text{ mW}$ |
+| **Case II (Green)** | $1.52 \text{ mW}$ | $0 \text{ mW}$ |
+| **Case III (Blue)** | $2.93 \text{ mW}$ | $0 \text{ mW}$ |
+
+### Experimental vs. Simulation Results (Set 1)
+<center><img src="img/test1.png"></center>
+
+Heater 1 Tuning Analysis
+
+* **Top Row (Experimental/Reference Data):** Shows the measured temporal intensity profiles in picoseconds ($\text{ps}$) across the three different tuning power states (b-I, b-II, and b-III).
+* **Bottom Row (Model Verification):** Displays the corresponding simulated response in nanoseconds ($\text{ns}$). The **Power ODE $|y|^2$** numerical model (dashed black line) shows an excellent fit with the simulated **Optical Power** (dotted red line).
+
+---
+
+## Part 2: Tuning Heater 2 ($P_2$)
+
+In the second set of tests, $P_1$ is kept turned off ($0\text{ mW}$) while the power applied to $P_2$ is steadily increased up to $5.75\text{ mW}$. This asymmetrical change induces a distinct morphological shift, notably accentuating and widening the secondary waveform peak over time.
+
+### Tuning Configurations (Set 2)
+
+| Configuration | Heater Power 1 ($P_1$) | Heater Power 2 ($P_2$) |
+| :--- | :--- | :--- |
+| **Case I (Red)** | $0 \text{ mW}$ | $0 \text{ mW}$ |
+| **Case II (Green)** | $0 \text{ mW}$ | $2.92 \text{ mW}$ |
+| **Case III (Blue)** | $0 \text{ mW}$ | $5.75 \text{ mW}$ |
+
+### Experimental vs. Simulation Results (Set 2)
+<center><img src="img/test2.png"></center>
+Heater 2 Tuning Analysis
+
+* **Top Row (Experimental/Reference Data):** Shows the measured temporal intensity profiles in picoseconds ($\text{ps}$) under $P_2$ tuning control (b-I, b-II, and b-III).
+* **Bottom Row (Model Verification):** Displays the corresponding simulated response in nanoseconds ($\text{ns}$). The **Power ODE $|y|^2$** prediction tracks the simulated **Optical Power** baseline flawlessly, validating our thermo-optic efficiency approximation under alternative asymmetrical loads.
+
+# Second Order LTI ODE Solver
+
+The previous first-order ODE solver configuration can be extended to solve higher-order differential equations by cascading multiple add-drop microring resonators (MRRs) with tunable interferometric couplers.
+
+## System Diagram
+<center><img src="img/second.png"></center>
+
+Cascaded MRR Second Order Solver
+
+*Schematic illustration of the second-order ODE solver implemented by two cascaded add-drop MRRs with interferometric couplers – Image taken from the paper «Compact tunable silicon photonics differential-equation solver for general linear time-invariant systems» - Wu et al.*
+
+---
+
+## Mathematical Model
+
+Assuming two cascaded add-drop MRRs share the exact same resonance wavelength, the system behavior simplifies to a second-order LTI differential equation:
+
+$$\frac{d^2y(t)}{dt^2} + a_1 \frac{dy(t)}{dt} + a_0 y(t) = \frac{d^2x(t)}{dt^2} + b_1 \frac{dx(t)}{dt} + b_0 x(t)$$
+
+### Transfer Function
+The cumulative system transfer function is the product of the individual MRR stages:
+
+$$H_{out} = H_{MRR1} \cdot H_{MRR2} = \frac{b_0 + jb_1\omega - \omega^2}{a_0 + ja_1\omega - \omega^2}$$
+
+Where the system coefficients map to the individual stage coefficients as follows:
+* $a_0 = a_{10} a_{20}$
+* $a_1 = a_{10} + a_{20}$
+* $b_0 = b_{10} b_{20}$
+* $b_1 = b_{10} + b_{20}$
+
+---
+
+## MATLAB Implementation
+
+The following MATLAB script sets up the simulation parameters, models the cascaded transfer function, and performs the temporal analysis using standard ODE solvers or frequency-domain filtering.
+
+```matlab
+% second order
+% second order
+P_heater1_2 = 0; % mW <20
+P_heater2_2 = 0; % mW <20
+
+nb1_2 = ng + eta1 * P_heater1_2;
+nb2_2 = ng + eta2 * P_heater2_2;
+
+MRR_Wu_2 = mrr_asym(R_ring, neff, ng, k0, L_b1, L_r1, L_b2, L_r2, nb1_2, nb2_2, A, alpha);
+
+% k1 and k2
+[MRR_Wu_2.k1, MRR_Wu_2.k2] = MRR_Wu_2.kappa(lambda0);
+
+Qi_2 = MRR_Wu_2.Q_Wu(f0, ng, etha);     
+Qe1_2 = MRR_Wu_2.Q_Wu(f0, ng, MRR_Wu_2.k1); 
+Qe2_2 = MRR_Wu_2.Q_Wu(f0, ng, MRR_Wu_2.k2); 
+
+% reformulation of the first mrr coefficients
+a10 = a0;
+b10 = b0;
+
+% coefficients for the second mrr
+[a20, b20] = MRR_Wu_2.parameters_LTI(f0, Qi_2, Qe1_2, Qe2_2)
+
+% second order ODE
+odefun2 = Model_utils.second_order_lti_scaled(a10, b10, a20, b20, x, x_d, A);
+y0_2 = [0; 0];
+
+[t_ns, y_2] = ode45(odefun2, tspan_ns, y0_2);
+
+y1 = y_2(:,1); % first mrr, through port
+y2 = y_2(:,2); % second mrr, through port
+
+% cross check frequency
+H1_optical = MRR_Wu.h_through_f(Df, delta_f); 
+H2_optical = MRR_Wu_2.h_through_f(Df, delta_f);
+H_tot_optical = H1_optical .* H2_optical;
+
+H1_ODE = MRR_Wu.h_ode_through(Df, a10, b10, delta_f);
+H2_ODE = MRR_Wu_2.h_ode_through(Df, a20, b20, delta_f);
+H_tot_ODE = H1_ODE .* H2_ODE;
+
+Out2_optical = real(ifft(ifftshift(IN_ring .* H_tot_optical)));
+Out2_ODE     = real(ifft(ifftshift(IN_ring .* H_tot_ODE)));
+```
