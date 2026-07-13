@@ -342,8 +342,8 @@ The response is periodic with the FSR: after a full FSR of detuning the signal l
 
 The RMSE follows the same behaviour. It has a sharp minimum of about $0.01$ exactly on resonance, and at every multiple of the FSR, and it rises very quickly to a plateau of about $0.26$ everywhere else. The plateau is not a measure of the error of the solver: once the signal is off resonance almost no light reaches the output, so the device is simply not solving the equation any more and the comparison with the exact solution loses its meaning. The useful information is the width of the dip, which tells us how precisely the laser has to be aligned to the resonance.
 
-<img width="392" height="294" alt="RMSE vs phase detuning - gaussian" src="img/rmse vs phase detnuninggaussian.png" /> <br>
-<img width="392" height="294" alt="RMSE vs phase detuning - super-gaussian" src="![alt text](<img/rmse vs phase detnuningsuper-gaussian.png>)" />
+<img width="392" height="294" alt="RMSE vs phase detuning - gaussian" src="img/rmse vs phase detnuninggaussian.png"> <br>
+<img width="392" height="294" alt="RMSE vs phase detuning - super-gaussian" src="img/rmse vs phase detnuningsuper-gaussian.png" />
 
 ## LTI Equation
 The system can be described by the following differential equation:
